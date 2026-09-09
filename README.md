@@ -225,5 +225,6 @@ Before building further, ask ten agency owners one question:
 If most say 20–40 minutes and sound annoyed, keep going. If they say "we just forward the CV",
 stop and find out what they do instead.
 
+- [docs/STATUS.md](docs/STATUS.md) — where the project is up to, and what to do next
 - [docs/OUTREACH.md](docs/OUTREACH.md) — where to find agencies and the emails to send them
 - [docs/PROSPECTING.md](docs/PROSPECTING.md) — building the prospect list from Companies House
