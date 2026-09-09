@@ -21,7 +21,10 @@ export { ProviderError } from "./types.js"
 const DEFAULT_MODEL: Record<string, string> = {
   anthropic: "claude-opus-5",
   openai: "gpt-5",
-  gemini: "gemini-2.5-pro",
+  // Gemini 3 Flash is billed at Flash rates with Pro-level reasoning, which is
+  // the right trade for per-CV screening. gemini-3.1-pro-preview is the step up
+  // if judgement quality measures short.
+  gemini: "gemini-3.7-flash",
 }
 
 let cached: Provider | undefined
