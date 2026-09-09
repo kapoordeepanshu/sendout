@@ -29,6 +29,11 @@ app.post("/api/screen", async (req, res) => {
   res.status(result.status).json(result.body)
 })
 
+app.get("/api/health", async (req, res) => {
+  const { default: health } = await import("../api/health.js")
+  health(req as never, res as never)
+})
+
 app.post("/api/pack", async (req, res) => {
   const result = await handlePack(req.body ?? {}, passwordOf(req))
   res.status(result.status).json(result.body)

@@ -96,8 +96,21 @@ export async function handlePack(
 
 function messageFor(err: unknown): string {
   const text = err instanceof Error ? err.message : String(err)
-  if (/API_KEY is not set|authentication|invalid_api_key|401/i.test(text)) {
-    return "The server has no valid model API key. Check the key for your chosen MODEL_PROVIDER in your Vercel project settings."
+
+  // Say which key, on which deployment, and keep the underlying message. An
+  // earlier version collapsed every failure into one generic sentence, which
+  // made the real cause impossible to see from the interface.
+  const missingKey = /([A-Z_]*API_KEY) is not set/.exec(text)
+  if (missingKey) {
+    const key = missingKey[1]
+    return process.env.VERCEL
+      ? `${key} is not set on this deployment. In Vercel, check it is scoped to Production — not only Development — then redeploy, because environment changes do not apply to an existing deployment.`
+      : `${key} is not set. Add it to your .env file and restart the dev server.`
   }
+
+  if (/invalid[_ ]api[_ ]key|API key not valid|unauthenticated|permission denied/i.test(text)) {
+    return `The model provider rejected the API key. ${text}`
+  }
+
   return text
 }
