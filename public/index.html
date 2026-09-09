@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sendout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+  :root {
+    --paper:   #ECEEEB;
+    --card:    #FFFFFF;
+    --sunk:    #E3E7E3;
+    --ink:     #15191A;
+    --ink-2:   #56605E;
+    --ink-3:   #8A9491;
+    --rule:    #D5DAD6;
+    --hair:    #E7EBE7;
+    --submit:  #1E6B45;
+    --maybe:   #94660F;
+    --reject:  #A03621;
+    --on-dark: #FFFFFF;
+
+    --sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:  #141817;
+      --card:   #1C2220;
+      --sunk:   #101514;
+      --ink:    #E4E9E6;
+      --ink-2:  #A6B0AC;
+      --ink-3:  #7B8783;
+      --rule:   #2E3735;
+      --hair:   #262E2C;
+      --submit: #57B383;
+      --maybe:  #CFA24E;
+      --reject: #D98868;
+      --on-dark:#0B1210;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .top {
+    display: flex; align-items: baseline; gap: 0.8rem;
+    padding: 1.1rem 1.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .top h1 {
+    margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.025em;
+  }
+  .top p { margin: 0; color: var(--ink-3); font-size: 0.86rem; }
+
+  main {
+    display: grid;
+    grid-template-columns: 21rem minmax(0, 1fr);
+    gap: 2rem;
+    padding: 1.75rem;
+    max-width: 78rem;
+    margin: 0 auto;
+    align-items: start;
+  }
+  @media (max-width: 60rem) { main { grid-template-columns: 1fr; gap: 1.5rem; } }
+
+  /* ---------- working rail ---------- */
+
+  .rail { display: grid; gap: 1.5rem; }
+  .rail section { display: grid; gap: 0.45rem; }
+  .rail h2 {
+    margin: 0; font-size: 0.9rem; font-weight: 600; letter-spacing: -0.005em;
+  }
+  .hint { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
+
+  textarea, input[type=text], input[type=password] {
+    width: 100%; font: inherit; font-size: 0.9rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 0.55rem 0.65rem;
+  }
+  textarea { min-height: 10rem; resize: vertical; line-height: 1.5; }
+  textarea::placeholder, input::placeholder { color: var(--ink-3); }
+  :focus-visible { outline: 2px solid var(--submit); outline-offset: 1px; }
+
+  .drop {
+    border: 1px dashed var(--rule); border-radius: 3px; background: var(--card);
+    padding: 1.25rem 1rem; text-align: center; cursor: pointer;
+    color: var(--ink-2); font-size: 0.88rem;
+  }
+  .drop:hover { border-color: var(--submit); color: var(--submit); }
+  .drop.over { border-color: var(--submit); background: var(--sunk); color: var(--submit); }
+
+  .files { list-style: none; margin: 0; padding: 0; font-size: 0.82rem; }
+  .files li {
+    display: flex; justify-content: space-between; gap: 0.75rem;
+    padding: 0.28rem 0; border-bottom: 1px solid var(--hair); color: var(--ink-2);
+  }
+  .files li span:last-child { color: var(--ink-3); font-variant-numeric: tabular-nums; flex: none; }
+  .files li.bad, .files li.bad span:last-child { color: var(--reject); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+
+  .toggle { display: flex; gap: 0.55rem; align-items: flex-start; font-size: 0.85rem; color: var(--ink-2); }
+  .toggle input { margin-top: 0.3rem; flex: none; }
+  .toggle b { color: var(--ink); font-weight: 600; }
+
+  button {
+    font: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    border: 1px solid transparent; border-radius: 3px; padding: 0.6rem 1rem;
+  }
+  .go { background: var(--submit); color: var(--on-dark); width: 100%; }
+  .go:disabled { opacity: 0.45; cursor: progress; }
+  .quiet {
+    background: transparent; border-color: var(--rule); color: var(--ink-2);
+    font-weight: 500; padding: 0.42rem 0.8rem; font-size: 0.85rem;
+  }
+  .quiet:hover { border-color: var(--submit); color: var(--submit); }
+
+  .progress { font-size: 0.85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  /* ---------- results ---------- */
+
+  .empty {
+    border: 1px dashed var(--rule); border-radius: 3px; padding: 4rem 2rem;
+    text-align: center; color: var(--ink-3); font-size: 0.92rem;
+  }
+  .notice {
+    background: var(--card); border-left: 3px solid var(--reject);
+    padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 0.87rem;
+  }
+  .notice b { display: block; margin-bottom: 0.2rem; }
+
+  .sheet {
+    display: grid; grid-template-columns: 4px minmax(0, 1fr);
+    background: var(--card); border: 1px solid var(--rule); border-top: none;
+  }
+  .sheet:first-of-type { border-top: 1px solid var(--rule); }
+  .sheet .edge { background: var(--ink-3); }
+  .sheet.submit .edge { background: var(--submit); }
+  .sheet.maybe  .edge { background: var(--maybe); }
+  .sheet.reject .edge { background: var(--reject); }
+  .body { padding: 1.15rem 1.35rem; min-width: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .sheet { animation: land 260ms ease-out both; }
+    @keyframes land { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+
+  .head { display: flex; gap: 1.25rem; align-items: flex-start; }
+  .who { min-width: 0; flex: 1; }
+  .who h3 { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: -0.015em; }
+  .who p { margin: 0.1rem 0 0; font-size: 0.85rem; color: var(--ink-2); }
+
+  .verdict { flex: none; text-align: right; width: 7.5rem; }
+  .verdict .n {
+    font-size: 2rem; font-weight: 700; line-height: 1;
+    letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+  }
+  .verdict .word { font-size: 0.82rem; font-weight: 600; margin-top: 0.1rem; }
+  .submit .verdict .word { color: var(--submit); }
+  .maybe  .verdict .word { color: var(--maybe); }
+  .reject .verdict .word { color: var(--reject); }
+  /* One 0-100 scale. Ticks mark the two decision thresholds the score is read against. */
+  .meter { position: relative; height: 3px; background: var(--sunk); margin-top: 0.45rem; }
+  .meter i { position: absolute; inset: 0 auto 0 0; display: block; }
+  .submit .meter i { background: var(--submit); }
+  .maybe  .meter i { background: var(--maybe); }
+  .reject .meter i { background: var(--reject); }
+  .meter u { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--ink-3); opacity: 0.5; }
+
+  .verdict-line { margin: 0.9rem 0 0; font-size: 0.95rem; max-width: 46rem; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.75rem; margin-top: 1.1rem; }
+  @media (max-width: 44rem) { .split { grid-template-columns: 1fr; } }
+  .split h4 { margin: 0 0 0.35rem; font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
+  .split ul { margin: 0; padding: 0; list-style: none; font-size: 0.88rem; }
+  .split li { margin-bottom: 0.5rem; }
+  /* The CV speaks in serif; the tool speaks in sans. Quotes are source material. */
+  .quote {
+    display: block; font-family: var(--serif); font-style: italic;
+    font-size: 0.92rem; color: var(--ink-2); line-height: 1.45;
+    border-left: 1px solid var(--rule); padding-left: 0.6rem; margin-top: 0.15rem;
+  }
+  .sev { color: var(--ink-3); font-size: 0.8rem; }
+  .sev.blocker { color: var(--reject); font-weight: 600; }
+
+  .ledger { width: 100%; border-collapse: collapse; margin-top: 1.2rem; font-size: 0.87rem; }
+  .ledger caption { text-align: left; font-size: 0.82rem; font-weight: 600; color: var(--ink-2); padding-bottom: 0.4rem; }
+  .ledger th {
+    text-align: left; font-weight: 500; font-size: 0.8rem; color: var(--ink-3);
+    border-bottom: 1px solid var(--rule); padding: 0 0.75rem 0.3rem 0;
+  }
+  .ledger td { padding: 0.45rem 0.75rem 0.45rem 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  .ledger td:last-child, .ledger th:last-child { padding-right: 0; }
+  /* Glyph + word, never colour alone. */
+  .mark { white-space: nowrap; font-weight: 500; }
+  .mark.yes { color: var(--submit); }
+  .mark.partial { color: var(--maybe); }
+  .mark.no { color: var(--reject); }
+
+  details { margin-top: 1rem; }
+  summary { cursor: pointer; font-size: 0.87rem; color: var(--ink-2); font-weight: 500; }
+  summary:hover { color: var(--submit); }
+  details ol { font-size: 0.88rem; margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--ink-2); }
+  details li { margin-bottom: 0.3rem; }
+
+  .actions { margin-top: 1.15rem; padding-top: 0.9rem; border-top: 1px solid var(--hair); }
+
+  .ghost-sheet {
+    background: var(--card); border: 1px solid var(--rule); border-top: none;
+    padding: 1.15rem 1.35rem 1.35rem 1.55rem;
+  }
+  .ghost-sheet:first-of-type { border-top: 1px solid var(--rule); }
+  .bar { height: 0.7rem; background: var(--sunk); border-radius: 2px; }
+  .bar + .bar { margin-top: 0.5rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    .bar { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.45 } }
+  }
+
+  /* ---------- submission pack ---------- */
+
+  dialog {
+    border: 1px solid var(--rule); border-radius: 3px; padding: 0;
+    width: min(46rem, 92vw); background: var(--card); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(10,16,14,0.55); }
+  .bar-top {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--rule);
+  }
+  .bar-top h3 { margin: 0; flex: 1; font-size: 0.92rem; font-weight: 600; }
+  /* The pack is a document, so it is set entirely in the serif. */
+  .doc {
+    font-family: var(--serif); font-size: 1rem; line-height: 1.6;
+    padding: 2rem 2.25rem; max-height: 70vh; overflow-y: auto;
+  }
+  .doc .letterhead {
+    font-family: var(--sans); font-weight: 700; font-size: 0.95rem;
+    letter-spacing: -0.01em; padding-bottom: 0.7rem;
+    border-bottom: 2px solid var(--ink); margin-bottom: 1.5rem;
+  }
+  .doc .letterhead em { font-style: normal; font-weight: 400; color: var(--ink-2); }
+  .doc h3 {
+    font-family: var(--sans); font-size: 0.85rem; font-weight: 600;
+    margin: 1.6rem 0 0.4rem; color: var(--ink-2);
+  }
+  .doc h3:first-of-type { margin-top: 0; }
+  .doc p, .doc li { max-width: 38rem; }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin: 0.6rem 0; }
+  .doc th, .doc td { text-align: left; padding: 0.45rem 0.75rem 0.45rem 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  .doc th { font-family: var(--sans); font-size: 0.78rem; font-weight: 500; color: var(--ink-3); }
+
+  @media print {
+    .top, .rail, .bar-top, #results { display: none !important; }
+    body, dialog { background: #fff; color: #000; }
+    dialog { border: 0; width: 100%; }
+    .doc { max-height: none; overflow: visible; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>Sendout</h1>
+  <p>Spec in, shortlist out.</p>
+</div>
+
+<main>
+  <div class="rail">
+    <section>
+      <h2>The role</h2>
+      <p class="hint">Paste the spec your client sent. Requirements, must-haves, salary, location.</p>
+      <textarea id="spec" placeholder="Senior Backend Engineer, Manchester, £75–90k…"></textarea>
+    </section>
+
+    <section>
+      <h2>The pile</h2>
+      <div class="drop" id="drop">
+        Drop CVs here, or click to choose<br>
+        <span class="hint">PDF, DOCX or TXT, up to 3&nbsp;MB each</span>
+      </div>
+      <input type="file" id="files" multiple accept=".pdf,.docx,.txt,.md" hidden>
+      <ul class="files" id="filelist"></ul>
+    </section>
+
+    <section>
+      <button class="go" id="run">Screen the pile</button>
+      <p class="progress" id="progress" hidden></p>
+    </section>
+
+    <section>
+      <h2>Your letterhead</h2>
+      <div class="two">
+        <input type="text" id="agency" placeholder="Agency name" value="Acme Recruitment">
+        <input type="text" id="consultant" placeholder="Your name">
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="anon" checked>
+        <span><b>Anonymise packs.</b> Removes the name, contact details and employers so the client can&rsquo;t go direct.</span>
+      </label>
+    </section>
+
+    <section id="gate" hidden>
+      <h2>Access password</h2>
+      <p class="hint" id="gateHint">This deployment is password protected.</p>
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+    </section>
+  </div>
+
+  <div id="results">
+    <div class="empty">Paste a spec and drop in some CVs.<br>The ranked shortlist lands here.</div>
+  </div>
+</main>
+
+<dialog id="modal">
+  <div class="bar-top">
+    <h3 id="packTitle">Submission pack</h3>
+    <button class="quiet" id="copyPack">Copy</button>
+    <button class="quiet" onclick="window.print()">Print</button>
+    <button class="quiet" id="closePack">Close</button>
+  </div>
+  <div class="doc" id="packBody"></div>
+</dialog>
+
+<script>
+  const $ = (id) => document.getElementById(id)
+  let chosen = []
+  let results = []
+  let skipped = []
+  let screening = 0
+
+  // ---- password, remembered for the tab only ----
+  const saved = sessionStorage.getItem("sendout-password")
+  if (saved) $("password").value = saved
+  $("password").addEventListener("input", () =>
+    sessionStorage.setItem("sendout-password", $("password").value))
+
+  function headers() {
+    return { "Content-Type": "application/json", "X-Sendout-Password": $("password").value }
+  }
+  function revealGate(message) {
+    $("gate").hidden = false
+    $("gateHint").textContent = message
+    $("password").focus()
+  }
+
+  // ---- files ----
+  const MAX_BYTES = 3 * 1024 * 1024
+  const drop = $("drop")
+  drop.addEventListener("click", () => $("files").click())
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over") })
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"))
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files])
+  })
+  $("files").addEventListener("change", (e) => addFiles([...e.target.files]))
+
+  function addFiles(files) {
+    const tooBig = files.filter((f) => f.size > MAX_BYTES)
+    chosen = chosen.concat(files.filter((f) => f.size <= MAX_BYTES))
+    $("filelist").innerHTML =
+      chosen.map((f) => row(f.name, Math.round(f.size / 1024) + " KB", false)).join("") +
+      tooBig.map((f) => row(f.name, "over 3 MB", true)).join("")
+  }
+  const row = (name, meta, bad) =>
+    `<li class="${bad ? "bad" : ""}"><span>${esc(name)}</span><span>${esc(meta)}</span></li>`
+
+  // ---- screening ----
+  $("run").addEventListener("click", async () => {
+    const spec = $("spec").value.trim()
+    if (!spec) return fail("Paste the job spec first.")
+    if (!chosen.length) return fail("Add at least one CV.")
+
+    results = []; skipped = []; screening = chosen.length
+    $("run").disabled = true
+    let done = 0
+    const tick = () => {
+      $("progress").hidden = false
+      $("progress").textContent = `${done} of ${chosen.length} screened`
+    }
+    tick(); render()
+
+    // One request per CV: functions have a wall-clock limit, so the browser
+    // fans out and each result renders the moment it lands.
+    await mapLimit(chosen, 4, async (file) => {
+      try {
+        const res = await fetch("/api/screen", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ jobSpec: spec, filename: file.name, fileBase64: await b64(file) }),
+        })
+        const data = await res.json()
+        if (res.status === 401 || res.status === 503) {
+          revealGate(data.error || "Password required.")
+          skipped.push({ filename: file.name, reason: data.error || "Password required." })
+        } else if (!res.ok) {
+          skipped.push({ filename: file.name, reason: data.error || "Screening failed." })
+        } else {
+          results.push({ id: crypto.randomUUID(), ...data })
+        }
+      } catch (err) {
+        skipped.push({ filename: file.name, reason: err.message })
+      } finally {
+        done++; screening--; tick(); render()
+      }
+    })
+
+    $("run").disabled = false
+    $("progress").hidden = true
+  })
+
+  async function mapLimit(items, limit, fn) {
+    let next = 0
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) await fn(items[next++])
+    }))
+  }
+
+  const b64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).split(",")[1])
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}`))
+    reader.readAsDataURL(file)
+  })
+
+  const fail = (m) => { $("results").innerHTML = `<div class="notice">${esc(m)}</div>` }
+
+  // ---- rendering ----
+  function render() {
+    const notice = skipped.length
+      ? `<div class="notice"><b>${skipped.length} skipped</b>${skipped
+          .map((s) => `${esc(s.filename)} — ${esc(s.reason)}`).join("<br>")}</div>`
+      : ""
+
+    const ranked = [...results].sort((a, b) => b.assessment.match_score - a.assessment.match_score)
+    const ghosts = Array.from({ length: Math.max(0, screening) }, ghost).join("")
+
+    $("results").innerHTML =
+      notice +
+      (ranked.length || ghosts
+        ? ranked.map(sheet).join("") + ghosts
+        : `<div class="empty">Paste a spec and drop in some CVs.<br>The ranked shortlist lands here.</div>`)
+
+    document.querySelectorAll("[data-pack]").forEach((b) =>
+      b.addEventListener("click", () => makePack(b.dataset.pack)))
+  }
+
+  const ghost = () =>
+    `<div class="ghost-sheet"><div class="bar" style="width:38%"></div>
+     <div class="bar" style="width:72%"></div><div class="bar" style="width:55%"></div></div>`
+
+  const MARKS = { yes: "● Yes", partial: "◐ Partial", no: "○ No" }
+
+  function sheet(c) {
+    const a = c.assessment
+    const sub = [a.current_role.title, a.current_role.employer, a.contact.location]
+      .filter(Boolean).join(", ") || c.filename
+
+    return `
+    <article class="sheet ${a.recommendation}">
+      <div class="edge"></div>
+      <div class="body">
+        <div class="head">
+          <div class="who">
+            <h3>${esc(a.candidate_name)}</h3>
+            <p>${esc(sub)}</p>
+          </div>
+          <div class="verdict">
+            <div class="n">${a.match_score}</div>
+            <div class="word">${esc(a.recommendation)}</div>
+            <div class="meter">
+              <i style="width:${Math.max(0, Math.min(100, a.match_score))}%"></i>
+              <u style="left:60%"></u><u style="left:80%"></u>
+            </div>
+          </div>
+        </div>
+
+        <p class="verdict-line">${esc(a.headline)}</p>
+
+        <div class="split">
+          <div>
+            <h4>What the CV evidences</h4>
+            <ul>${a.strengths.map((s) => `<li>${esc(s.claim)}
+              <span class="quote">${esc(s.evidence)}</span></li>`).join("")}</ul>
+          </div>
+          <div>
+            <h4>What to worry about</h4>
+            <ul>${a.gaps.length
+              ? a.gaps.map((g) => `<li>${esc(g.concern)}
+                  <span class="sev ${g.severity}">${esc(g.severity)}</span></li>`).join("")
+              : `<li class="sev">Nothing flagged</li>`}</ul>
+          </div>
+        </div>
+
+        <table class="ledger">
+          <caption>Against the spec</caption>
+          <thead><tr><th>Requirement</th><th>Met</th><th>Note</th></tr></thead>
+          <tbody>${a.requirements.map((r) => `<tr>
+            <td>${esc(r.requirement)}</td>
+            <td class="mark ${r.met}">${MARKS[r.met] || esc(r.met)}</td>
+            <td>${esc(r.note)}</td></tr>`).join("")}</tbody>
+        </table>
+
+        <details>
+          <summary>Ask these on the screening call</summary>
+          <ol>${a.screening_questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>
+        </details>
+
+        <div class="actions">
+          <button class="quiet" data-pack="${c.id}">Build submission pack</button>
+        </div>
+      </div>
+    </article>`
+  }
+
+  // ---- submission pack ----
+  async function makePack(id) {
+    const candidate = results.find((c) => c.id === id)
+    if (!candidate) return
+    $("packTitle").textContent = "Writing the pack…"
+    $("packBody").innerHTML = `<div class="bar" style="width:60%"></div>
+      <div class="bar" style="width:90%"></div><div class="bar" style="width:75%"></div>`
+    $("modal").showModal()
+
+    try {
+      const res = await fetch("/api/pack", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({
+          jobSpec: $("spec").value.trim(),
+          cvText: candidate.cvText,
+          assessment: candidate.assessment,
+          agencyName: $("agency").value,
+          consultantName: $("consultant").value,
+          anonymise: $("anon").checked,
+        }),
+      })
+      const data = await res.json()
+      if (res.status === 401 || res.status === 503) revealGate(data.error || "Password required.")
+      if (!res.ok) throw new Error(data.error || "Could not write the pack.")
+
+      $("packTitle").textContent = $("anon").checked
+        ? "Submission pack, anonymised"
+        : `Submission pack for ${candidate.assessment.candidate_name}`
+      $("packBody").innerHTML =
+        `<div class="letterhead">${esc($("agency").value || "Your agency")}${
+          $("consultant").value ? ` <em>prepared by ${esc($("consultant").value)}</em>` : ""
+        }</div>` + data.html
+    } catch (err) {
+      $("packTitle").textContent = "Submission pack"
+      $("packBody").innerHTML = `<div class="notice">${esc(err.message)}</div>`
+    }
+  }
+
+  $("closePack").addEventListener("click", () => $("modal").close())
+  $("copyPack").addEventListener("click", async () => {
+    await navigator.clipboard.writeText($("packBody").innerText)
+    $("copyPack").textContent = "Copied"
+    setTimeout(() => ($("copyPack").textContent = "Copy"), 1500)
+  })
+
+  function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c])
+  }
+</script>
+</body>
+</html>
