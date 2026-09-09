@@ -219,5 +219,7 @@ Before building further, ask ten agency owners one question:
 > how long does that take?
 
 If most say 20–40 minutes and sound annoyed, keep going. If they say "we just forward the CV",
-stop and find out what they do instead. [docs/PROSPECTING.md](docs/PROSPECTING.md) covers
-building the list to ask.
+stop and find out what they do instead.
+
+- [docs/OUTREACH.md](docs/OUTREACH.md) — where to find agencies and the emails to send them
+- [docs/PROSPECTING.md](docs/PROSPECTING.md) — building the prospect list from Companies House
