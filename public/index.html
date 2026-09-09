@@ -164,6 +164,9 @@
     padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.87rem; color: var(--ink-2);
   }
   .example-bar b { color: var(--ink); font-weight: 600; }
+  #gate.ok .hint { color: var(--submit); }
+  #gate.bad .hint { color: var(--reject); }
+  #gate.ok input { display: none; }
   .example-bar button { margin-left: auto; }
   .notice {
     background: var(--card); border-left: 3px solid var(--reject);
@@ -343,8 +346,8 @@
     </section>
 
     <section id="gate" hidden>
-      <h2>Access password</h2>
-      <p class="hint" id="gateHint">This deployment is password protected.</p>
+      <h2 id="gateTitle">Access</h2>
+      <p class="hint" id="gateHint">Checking&hellip;</p>
       <input type="password" id="password" placeholder="Password" autocomplete="current-password">
     </section>
   </div>
@@ -387,14 +390,55 @@
   // ---- password, remembered for the tab only ----
   const saved = sessionStorage.getItem("sendout-password")
   if (saved) $("password").value = saved
-  $("password").addEventListener("input", () =>
-    sessionStorage.setItem("sendout-password", $("password").value))
+
+  let unlocked = false
+  let verifying
+
+  $("password").addEventListener("input", () => {
+    sessionStorage.setItem("sendout-password", $("password").value)
+    clearTimeout(verifying)
+    verifying = setTimeout(verifyAccess, 400)
+  })
 
   function headers() {
     return { "Content-Type": "application/json", "X-Sendout-Password": $("password").value }
   }
+
+  /**
+   * Ask the server whether this deployment needs a password and whether we
+   * already have the right one — on load, not after a failed screening. Running
+   * locally there is no password, so the whole section stays hidden.
+   */
+  async function verifyAccess() {
+    const gate = $("gate")
+    try {
+      const res = await fetch("/api/health", { headers: headers() })
+      if (res.ok) {
+        unlocked = true
+        gate.hidden = true
+        gate.className = "ok"
+        return
+      }
+      unlocked = false
+      gate.hidden = false
+      const typed = $("password").value.length > 0
+      gate.className = typed ? "bad" : ""
+      $("gateTitle").textContent = "Access"
+      $("gateHint").textContent = typed
+        ? "That password isn't right."
+        : "This demo is password protected. Enter the password to screen CVs."
+    } catch {
+      // Offline or the function is down — say so rather than blaming the password.
+      gate.hidden = false
+      gate.className = ""
+      $("gateHint").textContent = "Can't reach the server. Check your connection and reload."
+    }
+  }
+
   function revealGate(message) {
+    unlocked = false
     $("gate").hidden = false
+    $("gate").className = $("password").value ? "bad" : ""
     $("gateHint").textContent = message
     $("password").focus()
   }
@@ -636,6 +680,8 @@
     $("copyPack").textContent = "Copied"
     setTimeout(() => ($("copyPack").textContent = "Copy"), 1500)
   })
+
+  verifyAccess()
 
   // First paint: show the worked example rather than an empty box.
   if (window.SAMPLE) {
