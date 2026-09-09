@@ -12,7 +12,9 @@ import { ProviderError, type Provider, type StructuredRequest, type TextRequest 
  * The job spec carries `cache_control`, so a 30-CV batch pays for it once.
  */
 export function anthropicProvider(model: string): Provider {
-  const client = new Anthropic()
+  // The SDK already retries 429s and 5xx; the default of 2 is thin when a model
+  // is under load, and a dropped CV is worse than a slow one.
+  const client = new Anthropic({ maxRetries: 4 })
 
   const system = (stable: string, context: string): Anthropic.TextBlockParam[] => [
     { type: "text", text: stable },

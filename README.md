@@ -208,6 +208,10 @@ charge for.
   failed on a valid PDF with "bad XRef entry". PDF is the format most CVs arrive in, so a stale
   parser silently loses candidates. Don't swap it back.
 - The shared password suits demo links. Replace it with real accounts before billing anyone.
+- Transient provider failures (429, 503) are retried four times with exponential backoff and
+  jitter, because a model under load would otherwise silently drop CVs from a batch and leave
+  the recruiter with a shorter shortlist and no reason to distrust it. Real errors, like a
+  rejected schema, still fail immediately.
 
 ---
 

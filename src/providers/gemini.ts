@@ -1,4 +1,5 @@
 import { ProviderError, type Provider, type StructuredRequest, type TextRequest } from "./types.js"
+import { failureFrom, withRetry } from "./retry.js"
 
 /**
  * Gemini adapter, over the REST API.
@@ -69,26 +70,26 @@ export function geminiProvider(model: string): Provider {
   const key: string = process.env.GEMINI_API_KEY
 
   async function call(body: Record<string, unknown>): Promise<string> {
-    const response = await fetch(`${BASE}/${model}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify(body),
+    return withRetry("Gemini", async () => {
+      const response = await fetch(`${BASE}/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify(body),
+      })
+
+      if (!response.ok) throw await failureFrom("gemini", response)
+
+      const data = (await response.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[]
+      }
+      const candidate = data.candidates?.[0]
+      if (candidate?.finishReason === "MAX_TOKENS") {
+        throw new ProviderError("gemini", "Response hit the token limit before finishing.")
+      }
+      const text = candidate?.content?.parts?.map((p) => p.text ?? "").join("")
+      if (!text) throw new ProviderError("gemini", "Empty response.")
+      return text
     })
-
-    if (!response.ok) {
-      throw new ProviderError("gemini", `${response.status}: ${await response.text()}`)
-    }
-
-    const data = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[]
-    }
-    const candidate = data.candidates?.[0]
-    if (candidate?.finishReason === "MAX_TOKENS") {
-      throw new ProviderError("gemini", "Response hit the token limit before finishing.")
-    }
-    const text = candidate?.content?.parts?.map((p) => p.text ?? "").join("")
-    if (!text) throw new ProviderError("gemini", "Empty response.")
-    return text
   }
 
   const instruction = (stable: string, context: string) => ({

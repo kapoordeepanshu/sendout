@@ -1,4 +1,5 @@
 import { ProviderError, type Provider, type StructuredRequest, type TextRequest } from "./types.js"
+import { failureFrom, withRetry } from "./retry.js"
 
 /**
  * OpenAI adapter, over the REST API rather than the SDK.
@@ -23,26 +24,26 @@ export function openaiProvider(model: string): Provider {
   if (!key) throw new ProviderError("openai", "OPENAI_API_KEY is not set.")
 
   async function call(body: Record<string, unknown>): Promise<string> {
-    const response = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, ...body }),
+    return withRetry("OpenAI", async () => {
+      const response = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model, ...body }),
+      })
+
+      if (!response.ok) throw await failureFrom("openai", response)
+
+      const data = (await response.json()) as {
+        choices?: { message?: { content?: string }; finish_reason?: string }[]
+      }
+      const choice = data.choices?.[0]
+      if (choice?.finish_reason === "length") {
+        throw new ProviderError("openai", "Response hit the token limit before finishing.")
+      }
+      const content = choice?.message?.content
+      if (!content) throw new ProviderError("openai", "Empty response.")
+      return content
     })
-
-    if (!response.ok) {
-      throw new ProviderError("openai", `${response.status}: ${await response.text()}`)
-    }
-
-    const data = (await response.json()) as {
-      choices?: { message?: { content?: string }; finish_reason?: string }[]
-    }
-    const choice = data.choices?.[0]
-    if (choice?.finish_reason === "length") {
-      throw new ProviderError("openai", "Response hit the token limit before finishing.")
-    }
-    const content = choice?.message?.content
-    if (!content) throw new ProviderError("openai", "Empty response.")
-    return content
   }
 
   // Stable instructions first, then the repeating job spec, then per-request
