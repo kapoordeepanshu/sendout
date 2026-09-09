@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Turn a job spec and a pile of CVs into a ranked shortlist and client-ready submission packs.",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "prospects": "tsx scripts/companies-house.ts",

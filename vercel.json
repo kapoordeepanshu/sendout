@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "public",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "functions": {
     "api/screen.ts": { "maxDuration": 120, "memory": 1024 },
     "api/pack.ts": { "maxDuration": 120, "memory": 1024 }
