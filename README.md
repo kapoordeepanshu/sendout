@@ -1,173 +1,168 @@
 # Sendout
 
-Spec in, shortlist out. Paste a client's job spec, drop in a pile of CVs, get back a ranked
-shortlist with evidence — then one click to a client-ready submission pack in the agency's
-own template, anonymised if they want it.
+**Spec in, shortlist out.**
 
-Built for small UK recruitment agencies. The pain it removes is the 20–40 minutes per CV
-that goes into formatting and writing up a candidate before submission, and the placements
-lost to whoever submitted first.
+Paste the job spec your client sent, drop in the pile of CVs, and get back a ranked shortlist
+where every judgement is backed by a quote from the CV — then one click to a client-ready
+submission pack on your own letterhead, anonymised so the client can't go direct.
 
-## Run it
+Built for small recruitment agencies. It removes the 20–40 minutes per candidate that goes into
+reading, writing up and formatting a CV before it can be submitted, and the placements lost to
+whichever agency submitted first.
+
+---
+
+## Quick start
 
 ```bash
 npm install
-cp .env.example .env      # then add your Anthropic key
+cp .env.example .env        # add your API key
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open <http://localhost:3000>.
+
+| Variable | Required | What it does |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | Always | Powers screening and pack writing. Server-side only — it never reaches the browser, and it never goes in git. |
+| `APP_PASSWORD` | In production | Shared password for the deployed app. **A deployment without it refuses every request**, so a public URL can never sit open. Optional locally. |
+| `COMPANIES_HOUSE_API_KEY` | Optional | Only for building the prospect list — see [docs/PROSPECTING.md](docs/PROSPECTING.md). |
+
+---
 
 ## What it does
 
-**Screening** (`src/claude.ts` → `screenCandidate`) — one Claude call per CV, returning a
-strict schema: match score out of 100, submit/maybe/reject, evidenced strengths with verbatim
-quotes from the CV, gaps with severity, a requirement-by-requirement table taken from the
-spec, and the screening questions the recruiter should actually ask on the call.
+### Screening
 
-The prompt is deliberately strict about two things: it never infers anything the CV does not
-say, and it is told that a shortlist recommending everyone is worthless. Both exist because
-generic CV scoring tools fail on exactly those points.
+One model call per CV, returning a strict schema rather than prose:
 
-**Submission packs** (`buildSubmissionPack`) — turns an assessment plus the raw CV into a
-client-facing profile: summary, a requirements table, relevant experience, honest gaps, and
-availability. **Anonymisation is on by default** — it strips the name, contact details and
-employer names so the client cannot go around the agency and approach the candidate directly.
-That is a real agency need, not a privacy nicety.
+- **Match score, 0–100**, and a verdict: submit, maybe, or reject
+- **Evidenced strengths** — every claim carries a verbatim quote from the CV
+- **Gaps and risks**, graded blocker / significant / minor
+- **A requirement ledger** — each requirement in the spec marked met, partial or not met, with a note
+- **Screening questions** aimed at that candidate's specific unknowns
 
-The job spec is cached across every CV in a batch (`cache_control`), so a 30-CV run pays for
-the spec once.
+Two rules are built into the prompt and matter more than any feature. It never infers anything
+the CV does not say — absent information comes back as "Not stated on CV", not a guess. And it
+is told that a shortlist recommending everyone is worthless, because an agency that submits
+everyone loses the client.
 
-## Cost
+### Submission packs
 
-Screening uses `claude-opus-5` at high effort, because match quality *is* the product. If
-per-CV cost becomes the binding constraint, `claude-sonnet-5` is the step down — but measure
-it against a set of CVs you have already judged by hand before switching. Change `MODEL` in
-`src/claude.ts`.
+An assessment plus the raw CV becomes a client-facing profile: summary, requirements table,
+relevant experience, the honest gaps, and availability.
 
-## Deploy to Vercel
+**Anonymisation is on by default.** It removes the name, contact details and employer names,
+replacing employers with descriptions like "a FTSE 250 retail bank", so a client can read the
+profile without being able to approach the candidate directly. That protects your fee.
 
-Push to a private GitHub repo, then import it at vercel.com/new. Vercel redeploys
-on every push, and preview URLs per branch are free. Or from the CLI:
+The job spec is cached across a batch, so screening thirty CVs pays for the spec once.
+
+### Try it without a key
+
+The interface opens with a worked example — a real spec, three assessed candidates, and a
+finished submission pack — rendered from local sample data with no API call and no password.
+Anyone you send the link to sees what the tool produces before they touch anything.
+
+---
+
+## Deploying
+
+Push to a private GitHub repo and import it at [vercel.com/new](https://vercel.com/new). Vercel
+redeploys on every push and gives a free preview URL per branch. Add `ANTHROPIC_API_KEY` and
+`APP_PASSWORD` in project settings.
+
+Or from the CLI:
 
 ```bash
 npm i -g vercel
-vercel                                    # first deploy, links the project
-vercel env add ANTHROPIC_API_KEY          # your key, all environments
-vercel env add APP_PASSWORD               # a password you give to demo users
+vercel                            # first deploy, links the project
+vercel env add ANTHROPIC_API_KEY
+vercel env add APP_PASSWORD
 vercel --prod
 ```
 
-**Both variables are required in production.** Without `APP_PASSWORD` the deployed
-app refuses every request with a 503 rather than serving openly — a public URL with
-no gate spends your Anthropic key for anyone who finds it.
+`vercel dev` runs the real serverless routes locally.
 
-`vercel dev` runs the same thing locally against the real serverless routes.
+### Two constraints shaped the architecture
 
-Two things about the architecture exist specifically because of serverless, and
-matter if you change them:
+- **One CV per request.** Serverless functions have a hard wall-clock limit, so the browser fans
+  out four at a time rather than asking the server to loop over a batch. Results render as they
+  land instead of after one long silence.
+- **No server state.** Functions share no memory between invocations, so extracted CV text
+  returns to the browser and comes back when building the pack. Request bodies cap at 4.5 MB,
+  which is why the interface rejects files over 3 MB — base64 inflates a file by about a third.
 
-- **One CV per request.** Functions have a hard wall-clock limit, so the browser
-  fans out (4 at a time) instead of asking the server to loop over a batch.
-  Results also render as they land rather than after one long silence.
-- **No server state.** Functions share no memory between invocations, so the
-  extracted CV text goes back to the browser and returns when building the pack.
-  Request bodies are capped at 4.5MB, which is why the UI rejects files over 3MB
-  (base64 inflates a file by about a third).
+### Keys and secrets
 
-The API key lives in Vercel's environment variables and never reaches the browser.
-**Customers never supply a key** — every agency runs through your account, and you
-meter them.
+The API key belongs in exactly two places: `.env` on your machine, and Vercel's environment
+variables. **Never commit it**, not even to a private repo — private repos get shared, cloned and
+occasionally made public, and a key stays in git history even after you delete the line.
 
-Set a hard monthly spend limit in the Anthropic Console as well. The password gate
-stops strangers; the spend limit is what stops a bug or a shared password from
-running up a bill you did not agree to.
+The password gate stops strangers. **Also set a hard monthly spend limit in the Anthropic
+Console** — that is what stops a bug, or a password that got forwarded, from running up a bill
+you did not agree to. Customers never supply their own key; every agency runs through your
+account, which is why usage metering is the first thing to build before charging anyone.
+
+---
 
 ## Layout
 
 ```
-api/               Vercel serverless routes (thin wrappers)
-src/handlers.ts    Request handling, shared by Vercel and local dev
-src/claude.ts      The prompts and schemas. This is the product.
-src/extract.ts     PDF / DOCX / TXT text extraction
-src/server.ts      Local dev server only — never deployed
-public/index.html  The whole UI, one file, no build step
-scripts/           Companies House prospect-list builder
-data/              Prospect CSVs
+api/                 Serverless routes — thin wrappers over the handlers
+src/claude.ts        Prompts and schemas. This is the product.
+src/handlers.ts      Request handling, shared by serverless and local dev
+src/auth.ts          Shared-password gate
+src/extract.ts       PDF / DOCX / TXT text extraction
+src/server.ts        Local dev server only — never deployed
+public/index.html    The entire interface. One file, no build step.
+public/sample.js     Worked example shown on first load
+scripts/             Companies House prospect-list builder
+docs/                Prospecting guide
 ```
 
-Nothing is persisted — a shortlist lives in the browser tab and disappears on refresh. A
-database is the first thing to add once someone pays.
+### Design notes
 
-## Known limits
+The interface reads as a marked assessment sheet rather than a dashboard, because that is what a
+recruiter is producing. Two typefaces with distinct jobs: the tool speaks in Archivo, and the
+**candidate's CV speaks in Newsreader** — every quotation lifted from a CV is set in serif
+italic, so source material stays visually separate from the system's own claims. The submission
+pack is a document, so it is set wholly in the serif.
 
-- **Scanned CVs with no text layer are skipped.** They are reported in the UI rather than
-  silently dropped. OCR is the fix if agencies actually hit this.
-- No auth, no multi-tenancy, no persistence, no usage metering. This is a demo you can put
-  in front of an agency owner, not a product you can charge for yet. **Do not leave a public
-  deployment unauthenticated** — it runs on your API key.
+Colour is spent only on the verdict; everything else is near-monochrome. Nothing is
+distinguished by colour alone — verdicts pair a word with a position on the meter, and
+requirement marks pair a glyph with a word.
 
 ---
 
-# Building the prospect list
+## Cost
 
-## The list itself
+Screening runs on `claude-opus-5` at high effort, because match quality *is* the product.
+Roughly $0.05–0.07 per CV. `claude-sonnet-5` is about a third of that — measure it against CVs
+you have already judged by hand before switching. Change `MODEL` in `src/claude.ts`.
 
-Companies House publishes every registered UK company for free, and SIC code **78109**
-("other activities of employment placement agencies") plus **78200** (temporary employment
-agencies) is the recruitment industry. That is a verifiable list of thousands of real
-companies.
+---
 
-```bash
-# free key: https://developer.company-information.service.gov.uk
-# add COMPANIES_HOUSE_API_KEY to .env
-npm run prospects
-```
+## Known limits
 
-This writes `data/prospects-uk-agencies.csv` with company name, number, incorporation date
-and registered address, filtered to active companies incorporated 2012–2023 — a rough proxy
-for "established but still small". Adjust the constants at the top of
-`scripts/companies-house.ts` to widen or narrow it.
+This is a working demo to put in front of an agency owner. It is not yet a product you can
+charge for.
 
-`data/prospects-seed.csv` has a handful of real agencies to start with today, in the same
-column layout, if you want to send a few emails before running the script.
+- **No accounts, no usage metering, no persistence.** A shortlist lives in the browser tab and
+  disappears on refresh. A database and per-account limits come first once someone pays.
+- **Scanned CVs with no text layer are skipped**, and reported in the interface rather than
+  silently dropped. OCR is the fix if agencies actually hit it.
+- The shared password suits demo links. Replace it with real accounts before billing anyone.
 
-## Getting contacts
+---
 
-Companies House does not publish email addresses, and neither should anyone else invent them
-for you — a list of guessed addresses bounces, and bounces wreck your sending domain before
-you have sent anything real. Fill the `email` column with one of these:
+## Validating it
 
-- **The agency's own website.** Small agencies publish a `hello@` or the owner's direct
-  address on the contact page. Highest quality, slowest.
-- **LinkedIn.** Search the company, find the founder or director. Recruiters are unusually
-  responsive on LinkedIn because it is their own channel.
-- **An email finder** (Hunter, Apollo, Clay, Findymail). Verify before sending — most tools
-  return a confidence score, and anything below "verified" should be dropped, not guessed.
+Before building further, ask ten agency owners one question:
 
-Two other directories worth mining: the **REC member directory** (rec.uk.com) lists
-accredited agencies, and **agencycentral.co.uk** lists agencies by region and sector.
+> When your team formats a candidate CV into your own template before sending it to a client,
+> how long does that take?
 
-## Before you send
-
-UK B2B cold email is governed by PECR, not just UK GDPR. Emailing a **limited company's**
-business address without prior consent is permitted; **sole traders and partnerships** are
-treated as individuals and need more care — the `company_number` column tells you which is
-which. Every email needs a genuine opt-out and your real business identity. Keep volume low
-and personal at the start: fifty well-researched emails beat a thousand generic ones, and
-they will not burn your domain.
-
-## Working the list
-
-The CSV has `status`, `sent_on`, `reply` and `notes` columns. Fill them in. What matters is
-not the reply rate — it is what people say in `notes` when they reply. Ten agency owners
-telling you what actually wastes their time is worth more than the product you have right
-now.
-
-The question to ask, in their words:
-
-> When your team formats a candidate CV into your own template before sending it to a
-> client, how long does that take?
-
-If most say 20–40 minutes and sound annoyed about it, build. If they say "we don't do that,
-we just forward the CV", stop and find out what they do instead.
+If most say 20–40 minutes and sound annoyed, keep going. If they say "we just forward the CV",
+stop and find out what they do instead. [docs/PROSPECTING.md](docs/PROSPECTING.md) covers
+building the list to ask.

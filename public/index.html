@@ -137,6 +137,34 @@
     border: 1px dashed var(--rule); border-radius: 3px; padding: 4rem 2rem;
     text-align: center; color: var(--ink-3); font-size: 0.92rem;
   }
+
+  /* ---------- opening pitch: what a cold visitor sees first ---------- */
+
+  .pitch { margin-bottom: 1.5rem; }
+  .pitch h2 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    font-weight: 700; line-height: 1.12; letter-spacing: -0.035em;
+    max-width: 26ch; text-wrap: balance;
+  }
+  .pitch h2 span { color: var(--submit); }
+  .pitch > p { margin: 0; max-width: 54ch; color: var(--ink-2); font-size: 0.95rem; }
+  .claims {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem; margin-top: 1.35rem; padding-top: 1.1rem;
+    border-top: 1px solid var(--rule);
+  }
+  @media (max-width: 44rem) { .claims { grid-template-columns: 1fr; gap: 0.9rem; } }
+  .claims div { font-size: 0.87rem; color: var(--ink-2); line-height: 1.45; }
+  .claims b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 0.1rem; }
+
+  .example-bar {
+    display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;
+    background: var(--sunk); border-left: 3px solid var(--ink-3);
+    padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.87rem; color: var(--ink-2);
+  }
+  .example-bar b { color: var(--ink); font-weight: 600; }
+  .example-bar button { margin-left: auto; }
   .notice {
     background: var(--card); border-left: 3px solid var(--reject);
     padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 0.87rem;
@@ -321,8 +349,19 @@
     </section>
   </div>
 
-  <div id="results">
-    <div class="empty">Paste a spec and drop in some CVs.<br>The ranked shortlist lands here.</div>
+  <div>
+    <div class="pitch" id="pitch">
+      <h2>Forty minutes a CV, down to <span>under five</span>.</h2>
+      <p>Drop in the pile. Sendout reads every CV against your client's spec, ranks them with the
+        evidence for each call, and writes the submission pack on your letterhead — anonymised, so
+        the client can't go direct.</p>
+      <div class="claims">
+        <div><b>Every claim is quoted</b>Nothing is inferred. If the CV doesn't say it, it says so.</div>
+        <div><b>Strict by default</b>A shortlist that recommends everyone loses you the client.</div>
+        <div><b>Submit first</b>Packs come out client-ready, not as something to tidy up.</div>
+      </div>
+    </div>
+    <div id="results"></div>
   </div>
 </main>
 
@@ -336,12 +375,14 @@
   <div class="doc" id="packBody"></div>
 </dialog>
 
+<script src="sample.js"></script>
 <script>
   const $ = (id) => document.getElementById(id)
   let chosen = []
   let results = []
   let skipped = []
   let screening = 0
+  let showingExample = false
 
   // ---- password, remembered for the tab only ----
   const saved = sessionStorage.getItem("sendout-password")
@@ -385,6 +426,7 @@
     if (!spec) return fail("Paste the job spec first.")
     if (!chosen.length) return fail("Add at least one CV.")
 
+    showingExample = false
     results = []; skipped = []; screening = chosen.length
     $("run").disabled = true
     let done = 0
@@ -441,6 +483,12 @@
 
   // ---- rendering ----
   function render() {
+    const banner = showingExample
+      ? `<div class="example-bar"><b>A worked example.</b>
+           Three candidates against the spec on the left. No account, no upload.
+           <button class="quiet" id="clearExample">Clear and use my own</button></div>`
+      : ""
+
     const notice = skipped.length
       ? `<div class="notice"><b>${skipped.length} skipped</b>${skipped
           .map((s) => `${esc(s.filename)} — ${esc(s.reason)}`).join("<br>")}</div>`
@@ -450,13 +498,22 @@
     const ghosts = Array.from({ length: Math.max(0, screening) }, ghost).join("")
 
     $("results").innerHTML =
-      notice +
+      banner + notice +
       (ranked.length || ghosts
         ? ranked.map(sheet).join("") + ghosts
         : `<div class="empty">Paste a spec and drop in some CVs.<br>The ranked shortlist lands here.</div>`)
 
     document.querySelectorAll("[data-pack]").forEach((b) =>
       b.addEventListener("click", () => makePack(b.dataset.pack)))
+
+    const clear = $("clearExample")
+    if (clear) clear.addEventListener("click", () => {
+      showingExample = false
+      results = []
+      $("spec").value = ""
+      render()
+      $("spec").focus()
+    })
   }
 
   const ghost = () =>
@@ -536,6 +593,13 @@
       <div class="bar" style="width:90%"></div><div class="bar" style="width:75%"></div>`
     $("modal").showModal()
 
+    if (showingExample) {
+      $("packTitle").textContent = "Submission pack, anonymised — example"
+      $("packBody").innerHTML =
+        `<div class="letterhead">${esc($("agency").value || "Your agency")}</div>` + window.SAMPLE.pack
+      return
+    }
+
     try {
       const res = await fetch("/api/pack", {
         method: "POST",
@@ -572,6 +636,16 @@
     $("copyPack").textContent = "Copied"
     setTimeout(() => ($("copyPack").textContent = "Copy"), 1500)
   })
+
+  // First paint: show the worked example rather than an empty box.
+  if (window.SAMPLE) {
+    showingExample = true
+    results = window.SAMPLE.candidates
+    $("spec").value = window.SAMPLE.spec
+    render()
+  } else {
+    render()
+  }
 
   function esc(v) {
     return String(v ?? "").replace(/[&<>"']/g, (c) =>
