@@ -9,20 +9,22 @@
     "dev": "tsx watch src/server.ts",
     "prospects": "tsx scripts/companies-house.ts",
     "typecheck": "tsc --noEmit",
-    "serve": "tsx src/server.ts"
+    "serve": "tsx src/server.ts",
+    "samples": "node scripts/make-sample-cvs.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
     "mammoth": "^1.8.0",
-    "pdf-parse": "^1.1.1"
+    "unpdf": "^1.7.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
-    "@types/pdf-parse": "^1.1.5",
     "@vercel/node": "^12.0.2",
+    "docx": "^9.7.1",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "pdfkit": "^0.20.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

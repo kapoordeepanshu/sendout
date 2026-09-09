@@ -1,7 +1,17 @@
 import mammoth from "mammoth"
-// pdf-parse's index.js runs a debug harness that reads a bundled test file and
-// throws under ESM. The lib entry point is the actual parser.
-import pdfParse from "pdf-parse/lib/pdf-parse.js"
+import { extractText, getDocumentProxy } from "unpdf"
+
+/**
+ * Pull plain text out of a CV.
+ *
+ * PDF is the format most CVs actually arrive in, so it matters more than the
+ * others. It uses `unpdf`, which wraps a current pdf.js build and ships no
+ * native dependencies, so it runs in a serverless function unchanged.
+ *
+ * The obvious choice, `pdf-parse`, bundles pdf.js v1.10.100 from 2018 and
+ * failed on a perfectly valid PDF with "bad XRef entry". CVs come out of Word,
+ * Google Docs, LaTeX and Canva, so a stale parser silently loses candidates.
+ */
 
 export interface ExtractedCv {
   filename: string
@@ -9,13 +19,13 @@ export interface ExtractedCv {
   error?: string
 }
 
-/** Pull plain text out of a PDF, DOCX or TXT CV. */
 export async function extractCv(filename: string, buffer: Buffer): Promise<ExtractedCv> {
   const lower = filename.toLowerCase()
   try {
     if (lower.endsWith(".pdf")) {
-      const parsed = await pdfParse(buffer)
-      return { filename, text: clean(parsed.text) }
+      const pdf = await getDocumentProxy(new Uint8Array(buffer))
+      const { text } = await extractText(pdf, { mergePages: true })
+      return { filename, text: clean(text) }
     }
     if (lower.endsWith(".docx")) {
       const parsed = await mammoth.extractRawText({ buffer })
@@ -24,7 +34,7 @@ export async function extractCv(filename: string, buffer: Buffer): Promise<Extra
     if (lower.endsWith(".txt") || lower.endsWith(".md")) {
       return { filename, text: clean(buffer.toString("utf8")) }
     }
-    return { filename, text: "", error: `Unsupported file type. Send PDF, DOCX or TXT.` }
+    return { filename, text: "", error: "Unsupported file type. Send PDF, DOCX or TXT." }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { filename, text: "", error: `Could not read this file: ${message}` }

@@ -1,0 +1,36 @@
+DAN OKAFOR
+Birmingham, UK | dan.okafor@example.com | 07700 900733
+
+BACKEND DEVELOPER
+
+Passionate developer with a track record of delivering high-quality,
+scalable solutions and driving digital transformation.
+
+EXPERIENCE
+
+Backend Developer — Merrow Retail Group, Birmingham
+October 2023 – present
+  Maintain and extend the Laravel monolith behind the e-commerce site.
+  Delivered a full replatforming of the checkout journey.
+  Work closely with stakeholders to drive business value.
+
+Developer — Foldwell Agency, Birmingham
+February 2021 – August 2023
+  Node.js and Express APIs for agency clients across retail and hospitality.
+  MySQL and some MongoDB. Built dashboards in React.
+
+  [Career break February 2023 – August 2023]
+
+Junior Developer — Starling Lane Web, Coventry
+September 2020 – January 2021
+  WordPress and PHP.
+
+TECHNICAL
+PHP, Laravel, Node.js, TypeScript, MySQL, MongoDB, React, Docker.
+Familiar with cloud technologies and modern development practices.
+
+EDUCATION
+BSc Computing, Coventry University, 2020.
+
+OTHER
+Notice period: 2 weeks. Available immediately for the right role.

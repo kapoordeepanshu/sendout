@@ -89,6 +89,19 @@ Anthropic is the default because the prompts were written and tuned against it. 
 switching, assemble twenty CVs you have already judged by hand and compare — "the output
 looks fine" is not a measurement, and screening judgement is what customers pay for.
 
+### Demo CVs
+
+`samples/` holds three CVs written against the job spec the app opens with, in three formats so
+a demo also exercises all three extractors:
+
+| File | Should score | What it hides |
+| --- | --- | --- |
+| `marcus-ellery-cv.pdf` | High | Meets every requirement, but his 3-month notice misses the client's 8-week window |
+| `sofia-marchetti-cv.docx` | Middling | Strong on the nice-to-haves; Go is one year old and the salary ask is above band |
+| `dan-okafor-cv.txt` | Low | Reads confidently, has none of the must-haves, and there's an unexplained career break |
+
+Regenerate with `npm run samples`.
+
 ### Try it without a key
 
 The interface opens with a worked example — a real spec, three assessed candidates, and a
@@ -149,7 +162,8 @@ src/extract.ts       PDF / DOCX / TXT text extraction
 src/server.ts        Local dev server only — never deployed
 public/index.html    The entire interface. One file, no build step.
 public/sample.js     Worked example shown on first load
-scripts/             Companies House prospect-list builder
+samples/             Three demo CVs matching the built-in job spec
+scripts/             Companies House prospect-list builder, demo CV generator
 docs/                Prospecting guide
 ```
 
@@ -190,6 +204,9 @@ charge for.
   disappears on refresh. A database and per-account limits come first once someone pays.
 - **Scanned CVs with no text layer are skipped**, and reported in the interface rather than
   silently dropped. OCR is the fix if agencies actually hit it.
+- PDF text extraction uses `unpdf`, not `pdf-parse` — the latter bundles pdf.js from 2018 and
+  failed on a valid PDF with "bad XRef entry". PDF is the format most CVs arrive in, so a stale
+  parser silently loses candidates. Don't swap it back.
 - The shared password suits demo links. Replace it with real accounts before billing anyone.
 
 ---
