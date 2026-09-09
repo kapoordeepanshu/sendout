@@ -1,6 +1,6 @@
 import { extractCv } from "./extract.js"
 import { checkAccess } from "./auth.js"
-import { buildSubmissionPack, screenCandidate, type Assessment } from "./claude.js"
+import { buildSubmissionPack, screenCandidate, type Assessment } from "./screening.js"
 
 /**
  * Request handlers as pure functions, so the Vercel serverless entry points in
@@ -96,8 +96,8 @@ export async function handlePack(
 
 function messageFor(err: unknown): string {
   const text = err instanceof Error ? err.message : String(err)
-  if (text.includes("ANTHROPIC_API_KEY") || text.includes("authentication")) {
-    return "The server has no valid Anthropic API key. Set ANTHROPIC_API_KEY in your Vercel project settings."
+  if (/API_KEY is not set|authentication|invalid_api_key|401/i.test(text)) {
+    return "The server has no valid model API key. Check the key for your chosen MODEL_PROVIDER in your Vercel project settings."
   }
   return text
 }

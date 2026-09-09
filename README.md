@@ -24,7 +24,9 @@ Open <http://localhost:3000>.
 
 | Variable | Required | What it does |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | Always | Powers screening and pack writing. Server-side only — it never reaches the browser, and it never goes in git. |
+| `MODEL_PROVIDER` | No | `anthropic` (default), `openai` or `gemini`. |
+| `MODEL_NAME` | No | Override the default model for that provider. |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | Whichever provider you chose | Powers screening and pack writing. Server-side only — it never reaches the browser, and it never goes in git. |
 | `APP_PASSWORD` | In production | Shared password for the deployed app. **A deployment without it refuses every request**, so a public URL can never sit open. Optional locally. |
 | `COMPANIES_HOUSE_API_KEY` | Optional | Only for building the prospect list — see [docs/PROSPECTING.md](docs/PROSPECTING.md). |
 
@@ -57,6 +59,35 @@ replacing employers with descriptions like "a FTSE 250 retail bank", so a client
 profile without being able to approach the candidate directly. That protects your fee.
 
 The job spec is cached across a batch, so screening thirty CVs pays for the spec once.
+
+### Swapping the model
+
+Every model call goes through one interface in `src/providers/`, so switching is
+two environment variables:
+
+```bash
+MODEL_PROVIDER=openai   OPENAI_API_KEY=...
+MODEL_PROVIDER=gemini   GEMINI_API_KEY=...
+```
+
+The prompts and the schema in `src/screening.ts` are provider-agnostic and are what
+actually determine output quality. Three things differ underneath:
+
+- **Structured output.** Anthropic uses a strict tool, OpenAI uses
+  `response_format: json_schema`, Gemini uses `responseSchema`. Gemini's dialect is an
+  OpenAPI subset rather than JSON Schema — it rejects `additionalProperties`, wants
+  uppercase type names, and marks optional fields `nullable: true` instead of a
+  `["string", "null"]` union — so `toGeminiSchema` translates ours on the way out.
+- **Caching, which is the real cost difference.** Anthropic caches the job spec
+  explicitly, so a 30-CV batch pays for it once. OpenAI caches automatically above a
+  token threshold with no explicit placement. Gemini's explicit caching has a minimum
+  size a job spec usually falls under, so the spec is re-charged on every CV.
+- **The adapters.** Anthropic uses its SDK; OpenAI and Gemini go over REST, which adds
+  no dependency and nothing to keep in step with SDK releases.
+
+Anthropic is the default because the prompts were written and tuned against it. Before
+switching, assemble twenty CVs you have already judged by hand and compare — "the output
+looks fine" is not a measurement, and screening judgement is what customers pay for.
 
 ### Try it without a key
 
@@ -110,7 +141,8 @@ account, which is why usage metering is the first thing to build before charging
 
 ```
 api/                 Serverless routes — thin wrappers over the handlers
-src/claude.ts        Prompts and schemas. This is the product.
+src/screening.ts     Prompts and schema. This is the product.
+src/providers/       Anthropic, OpenAI and Gemini adapters behind one interface
 src/handlers.ts      Request handling, shared by serverless and local dev
 src/auth.ts          Shared-password gate
 src/extract.ts       PDF / DOCX / TXT text extraction
@@ -138,8 +170,14 @@ requirement marks pair a glyph with a word.
 ## Cost
 
 Screening runs on `claude-opus-5` at high effort, because match quality *is* the product.
-Roughly $0.05–0.07 per CV. `claude-sonnet-5` is about a third of that — measure it against CVs
-you have already judged by hand before switching. Change `MODEL` in `src/claude.ts`.
+Roughly $0.05–0.07 per CV. `claude-sonnet-5` is about a third of that, for a one-line change:
+
+```bash
+MODEL_NAME=claude-sonnet-5
+```
+
+If cost is the motive, that step down saves more than switching provider does. Measure it
+against CVs you have already judged by hand before making it the default.
 
 ---
 
