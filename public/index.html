@@ -44,6 +44,11 @@
 
   * { box-sizing: border-box; }
 
+  /* The user-agent rule for [hidden] is display:none, but any class-plus-element
+     selector below (.rail section, for one) outranks it and silently re-shows
+     the element. Restate it with enough weight to win. */
+  [hidden] { display: none !important; }
+
   body {
     margin: 0;
     background: var(--paper);
@@ -417,6 +422,7 @@
         unlocked = true
         gate.hidden = true
         gate.className = "ok"
+        $("gateHint").textContent = "Unlocked."
         return
       }
       unlocked = false
