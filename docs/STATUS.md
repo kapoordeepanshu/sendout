@@ -4,7 +4,7 @@ Last updated: 9 September 2026.
 
 ## Working
 
-Live at **https://sendout-pied.vercel.app**, running on **Gemini**. A real run screened three
+Live at **https://sendout-dk.vercel.app**, running on **Gemini**. A real run screened three
 CVs and produced sensible verdicts — Sofia Marchetti scored 68 / maybe, correctly identifying
 strong fintech and Kubernetes experience against only one year of Go where the spec asks for
 five. PDF, DOCX and TXT extraction all confirmed working in production.
